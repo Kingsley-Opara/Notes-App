@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '@/app/lib/dynamodb';
