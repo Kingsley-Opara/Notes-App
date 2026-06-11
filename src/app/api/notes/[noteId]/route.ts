@@ -11,11 +11,13 @@ async function getUser(req: NextRequest) {
   return await verifyCloudflareToken(token);
 }
 
-// ── GET /api/notes/[noteId] — fetch one note ──────────────────
+// ── GET /api/notes/[noteId] ───────────────────────────────────
 export async function GET(
   req: NextRequest,
-  { params }: { params: { noteId: string } }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
+  const { noteId } = await params; // ✅ await params
+
   const user = await getUser(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +27,7 @@ export async function GET(
     const result = await dynamo.send(
       new GetCommand({
         TableName: TABLE,
-        Key: { noteId: params.noteId },
+        Key: { noteId },
       })
     );
 
@@ -33,7 +35,6 @@ export async function GET(
       return NextResponse.json({ error: 'Note not found' }, { status: 404 });
     }
 
-    // Make sure the note belongs to this user
     if (result.Item.userEmail !== user.email) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -46,22 +47,23 @@ export async function GET(
   }
 }
 
-// ── PUT /api/notes/[noteId] — update a note ───────────────────
+// ── PUT /api/notes/[noteId] ───────────────────────────────────
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { noteId: string } }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
+  const { noteId } = await params; // ✅ await params
+
   const user = await getUser(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // First check the note exists and belongs to this user
     const existing = await dynamo.send(
       new GetCommand({
         TableName: TABLE,
-        Key: { noteId: params.noteId },
+        Key: { noteId },
       })
     );
 
@@ -90,7 +92,7 @@ export async function PUT(
       })
     );
 
-    console.log('✅ Note updated:', params.noteId);
+    console.log('✅ Note updated:', noteId);
     return NextResponse.json({ note: updatedNote });
 
   } catch (error) {
@@ -99,22 +101,23 @@ export async function PUT(
   }
 }
 
-// ── DELETE /api/notes/[noteId] — delete a note ────────────────
+// ── DELETE /api/notes/[noteId] ────────────────────────────────
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { noteId: string } }
+  { params }: { params: Promise<{ noteId: string }> }
 ) {
+  const { noteId } = await params; // ✅ await params
+
   const user = await getUser(req);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // First check the note belongs to this user
     const existing = await dynamo.send(
       new GetCommand({
         TableName: TABLE,
-        Key: { noteId: params.noteId },
+        Key: { noteId },
       })
     );
 
@@ -129,11 +132,11 @@ export async function DELETE(
     await dynamo.send(
       new DeleteCommand({
         TableName: TABLE,
-        Key: { noteId: params.noteId },
+        Key: { noteId },
       })
     );
 
-    console.log('✅ Note deleted:', params.noteId);
+    console.log('✅ Note deleted:', noteId);
     return NextResponse.json({ message: 'Note deleted successfully' });
 
   } catch (error) {
