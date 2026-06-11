@@ -84,9 +84,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // 2. Allow public routes
-  // if (PUBLIC_ROUTES.includes(pathname)) {
-  //   return NextResponse.next();
-  // }
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return NextResponse.next();
+  }
 
   // 3. Get Cloudflare JWT
   const token = req.cookies.get('CF_Authorization')?.value;
