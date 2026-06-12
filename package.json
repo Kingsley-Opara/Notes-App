@@ -5,9 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "cf:build": "opennextjs-cloudflare build",
-    "preview": "wrangler pages dev",
-    "deploy": "wrangler pages deploy"
+    "tunnel": "cloudflared tunnel run my-nextjs-app",
+    "dev:tunnel": "concurrently \"npm run dev\" \"npm run tunnel\""
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1065.0",
