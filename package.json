@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "tunnel": "cloudflared tunnel run my-nextjs-app",
-    "dev:tunnel": "concurrently \"npm run dev\" \"npm run tunnel\""
+    "build": "opennextjs-cloudflare",
+    "preview": "wrangler pages dev",
+    "deploy": "wrangler pages deploy"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1065.0",
     "@aws-sdk/lib-dynamodb": "^3.1065.0",
     "@cloudflare/pages-plugin-cloudflare-access": "^1.0.5",
+    "@opennextjs/cloudflare": "^1.19.11",
     "jose": "^6.2.3",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
