@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "opennextjs-cloudflare",
+    "build": "opennextjs-cloudflare build",
     "preview": "wrangler pages dev",
     "deploy": "wrangler pages deploy"
   },
