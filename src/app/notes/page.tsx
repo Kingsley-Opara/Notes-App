@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { NotebookPen, Plus, Trash2, Pencil, X, Check } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { NotebookPen, Plus, Trash2, Pencil, X, Check, Search } from 'lucide-react';
 
 interface Note {
   usersnoteId: string;
@@ -15,7 +15,10 @@ type View = 'grid' | 'create' | 'edit';
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<View>('grid');
   const [activeNote, setActiveNote] = useState<Note | null>(null);
   const [title, setTitle] = useState('');
@@ -29,6 +32,20 @@ export default function Dashboard() {
     fetchNotes();
     fetchUser();
   }, []);
+
+  // ── Debounced search ─────────────────────────────────────────
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredNotes(notes);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 400); // wait 400ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, notes]);
 
   async function fetchUser() {
     try {
@@ -44,11 +61,34 @@ export default function Dashboard() {
       const res = await fetch('/api/notes');
       const data = await res.json();
       setNotes(data.notes ?? []);
+      setFilteredNotes(data.notes ?? []);
     } catch {
       setError('Failed to load notes');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSearch(query: string) {
+    if (!query.trim()) {
+      setFilteredNotes(notes);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/notes/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setFilteredNotes(data.notes ?? []);
+    } catch {
+      setError('Search failed');
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function clearSearch() {
+    setSearchQuery('');
+    setFilteredNotes(notes);
   }
 
   async function handleCreate() {
@@ -67,6 +107,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setNotes(prev => [data.note, ...prev]);
+      setFilteredNotes(prev => [data.note, ...prev]);
       resetForm();
       setView('grid');
     } catch (err: any) {
@@ -92,9 +133,11 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setNotes(prev =>
-        prev.map(n => (n.usersnoteId === activeNote.usersnoteId ? data.note : n))
+      const updated = notes.map(n =>
+        n.usersnoteId === activeNote.usersnoteId ? data.note : n
       );
+      setNotes(updated);
+      setFilteredNotes(updated);
       resetForm();
       setView('grid');
     } catch (err: any) {
@@ -109,7 +152,9 @@ export default function Dashboard() {
     try {
       const res = await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
-      setNotes(prev => prev.filter(n => n.usersnoteId !== noteId));
+      const updated = notes.filter(n => n.usersnoteId !== noteId);
+      setNotes(updated);
+      setFilteredNotes(updated);
     } catch {
       setError('Failed to delete note');
     } finally {
@@ -137,13 +182,13 @@ export default function Dashboard() {
     setError('');
   }
 
-  // ✅ Fix 1 — use plain string split instead of Date methods
-  // This avoids server/client locale mismatch entirely
   function formatDate(iso: string) {
     const [datePart] = iso.split('T');
     const [year, month, day] = datePart.split('-');
     return `${month}/${day}/${year}`;
   }
+
+  const displayNotes = searchQuery ? filteredNotes : notes;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -175,17 +220,39 @@ export default function Dashboard() {
         {/* ── Grid view ─────────────────────────────────────── */}
         {view === 'grid' && (
           <>
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-xl font-semibold text-gray-800">
-                {notes.length > 0
+            <div className="flex items-center justify-between mb-6 gap-4">
+              <h1 className="text-xl font-semibold text-gray-800 shrink-0">
+                {searchQuery
+                  ? `${filteredNotes.length} result${filteredNotes.length !== 1 ? 's' : ''}`
+                  : notes.length > 0
                   ? `${notes.length} note${notes.length !== 1 ? 's' : ''}`
                   : 'Your notes'}
               </h1>
+
+              {/* ── Search bar ── */}
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search notes..."
+                  className="w-full h-9 pl-9 pr-8 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 transition"
+                />
+                {/* Clear button */}
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* ✅ Fix 2 — unique keys using index + label */}
                 {['skeleton-1', 'skeleton-2', 'skeleton-3'].map(key => (
                   <div
                     key={key}
@@ -197,26 +264,58 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-            ) : notes.length === 0 ? (
+            ) : searching ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {['s-1', 's-2', 's-3'].map(key => (
+                  <div
+                    key={key}
+                    className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse"
+                  >
+                    <div className="h-4 bg-gray-100 rounded w-3/4 mb-3" />
+                    <div className="h-3 bg-gray-100 rounded w-full mb-2" />
+                    <div className="h-3 bg-gray-100 rounded w-5/6" />
+                  </div>
+                ))}
+              </div>
+            ) : displayNotes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <NotebookPen className="h-10 w-10 text-gray-300 mb-4" />
-                <h2 className="text-lg font-medium text-gray-600 mb-1">
-                  No notes yet
-                </h2>
-                <p className="text-sm text-gray-400 mb-6">
-                  Create your first note to get started
-                </p>
-                <button
-                  onClick={openCreate}
-                  className="flex items-center gap-2 bg-gray-800 text-white text-sm px-5 h-9 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create note
-                </button>
+                {searchQuery ? (
+                  <>
+                    <h2 className="text-lg font-medium text-gray-600 mb-1">
+                      No results found
+                    </h2>
+                    <p className="text-sm text-gray-400 mb-6">
+                      No notes match "{searchQuery}"
+                    </p>
+                    <button
+                      onClick={clearSearch}
+                      className="text-sm text-gray-600 underline"
+                    >
+                      Clear search
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-lg font-medium text-gray-600 mb-1">
+                      No notes yet
+                    </h2>
+                    <p className="text-sm text-gray-400 mb-6">
+                      Create your first note to get started
+                    </p>
+                    <button
+                      onClick={openCreate}
+                      className="flex items-center gap-2 bg-gray-800 text-white text-sm px-5 h-9 rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create note
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {notes.map(note => (
+                {displayNotes.map(note => (
                   <div
                     key={note.usersnoteId}
                     className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3 hover:border-gray-300 hover:shadow-sm transition-all group"
