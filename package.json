@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "start": "next start",
     "build": "next build",
     "tunnel": "cloudflared tunnel run my-nextjs-app",
     "dev:tunnel": "concurrently \"npm run dev\" \"npm run tunnel\""
