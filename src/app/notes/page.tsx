@@ -333,7 +333,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => openEdit(note)}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="p-1.5 rounded-md text-gray-800 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                           title="Edit"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -341,7 +341,7 @@ export default function Dashboard() {
                         <button
                           onClick={() => handleDelete(note.usersnoteId)}
                           disabled={deleting === note.usersnoteId}
-                          className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded-md text-gray-800 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                           title="Delete"
                         >
                           {deleting === note.usersnoteId ? (
